@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reciver</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#313338;--bg-dark:#2B2D31;--bg-darker:#1E1F22;--bg-input:#383A40;
+  --accent:#5865F2;--accent-h:#4752C4;--text:#DCDDDE;--text-muted:#949BA4;
+  --text-head:#F2F3F5;--hover:#2E3035;--green:#23A55A;--red:#ED4245;
+  --border:#3F4147;--yellow:#FEE75C;
+}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg-darker);color:var(--text);height:100vh;overflow:hidden}
+
+/* AUTH */
+#auth{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg-darker)}
+.auth-card{background:var(--bg-dark);border-radius:8px;padding:32px;width:400px;border:1px solid var(--border)}
+.auth-card h1{text-align:center;color:var(--text-head);font-size:24px;margin-bottom:4px}
+.auth-card .sub{text-align:center;color:var(--text-muted);margin-bottom:24px;font-size:13px}
+.auth-card label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase}
+.auth-card input{width:100%;height:42px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:0 12px;font-size:14px;margin-bottom:14px}
+.auth-card input:focus{outline:none;border-color:var(--accent)}
+.btn{width:100%;height:44px;background:var(--accent);color:white;border:none;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--accent-h)}
+.btn-sm{width:auto;height:36px;padding:0 16px;font-size:13px;font-weight:600}
+.err{color:var(--red);font-size:12px;text-align:center;margin-bottom:8px;min-height:18px}
+.toggle{text-align:center;margin-top:12px;color:var(--text-muted);font-size:13px}
+.toggle a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:700}
+
+/* APP */
+#app{display:none;height:100vh;flex-direction:row}
+
+/* Sidebar strip */
+.sv{width:68px;background:var(--bg-darker);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;flex-shrink:0}
+.sv-btn{width:48px;height:48px;border-radius:24px;background:var(--bg-dark);border:none;color:var(--text-muted);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.sv-btn:hover{background:var(--accent);color:white;border-radius:16px}
+.sv-btn.active{background:var(--accent);color:white;border-radius:16px}
+
+/* Channel list */
+.ch{width:240px;background:var(--bg-dark);display:flex;flex-direction:column;flex-shrink:0}
+.ch-header{height:48px;display:flex;align-items:center;padding:0 16px;font-weight:700;color:var(--text-head);border-bottom:1px solid var(--border);flex-shrink:0}
+.ch-body{flex:1;overflow-y:auto;padding:8px 0}
+.ch-body::-webkit-scrollbar{width:4px}
+.ch-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.ch-section{font-size:10px;font-weight:700;color:var(--text-muted);padding:10px 16px 4px;text-transform:uppercase}
+.ch-btn{width:100%;height:34px;background:transparent;border:none;color:var(--text-muted);text-align:left;padding:0 8px 0 16px;cursor:pointer;border-radius:4px;font-size:13px;margin:1px 6px;width:calc(100% - 12px)}
+.ch-btn:hover{background:var(--hover);color:var(--text-head)}
+.ch-btn.active{background:var(--accent) !important;color:white !important}
+
+/* Profile bar */
+.profile-bar{height:54px;background:#232428;display:flex;align-items:center;padding:0 8px;gap:8px;flex-shrink:0}
+.pav{width:34px;height:34px;border-radius:50%;cursor:pointer;object-fit:cover;flex-shrink:0}
+.pav-placeholder{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;cursor:pointer}
+.pinfo{flex:1;min-width:0}
+.pinfo .nick{font-size:13px;font-weight:700;color:var(--text-head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pinfo .code{font-size:10px;color:var(--text-muted);font-family:monospace}
+
+/* Right area */
+.right{flex:1;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+
+/* Chat header */
+.chat-hdr{height:48px;display:flex;align-items:center;padding:0 16px;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.chat-hdr .icon{font-size:20px;color:var(--text-muted)}
+.chat-hdr .title{font-size:15px;font-weight:700;color:var(--text-head);flex:1}
+.chat-hdr .hdr-btn{background:transparent;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:4px}
+.chat-hdr .hdr-btn:hover{background:var(--border);color:var(--text-head)}
+
+/* Messages */
+.msgs{flex:1;overflow-y:auto;padding:16px 0}
+.msgs::-webkit-scrollbar{width:6px}
+.msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.msg-row{display:flex;padding:2px 16px;gap:12px}
+.msg-row.grouped{padding-left:70px}
+.msg-row:not(.grouped){margin-top:16px}
+.msg-av{width:40px;height:40px;border-radius:50%;flex-shrink:0;object-fit:cover;cursor:pointer}
+.msg-av-placeholder{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;cursor:pointer}
+.msg-body{flex:1;min-width:0}
+.msg-header{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.msg-nick{font-size:13px;font-weight:700;color:var(--text-head);cursor:pointer}
+.msg-nick:hover{text-decoration:underline}
+.msg-time{font-size:11px;color:var(--text-muted)}
+.msg-text{font-size:14px;color:var(--text);line-height:1.4;word-wrap:break-word}
+.msg-deleted{font-size:13px;color:var(--text-muted);font-style:italic}
+
+/* Input */
+.input-area{padding:8px 16px 16px;flex-shrink:0}
+.input-box{display:flex;background:var(--bg-input);border-radius:8px;align-items:center;padding:0 4px}
+.input-box input{flex:1;height:44px;background:transparent;border:none;color:var(--text);padding:0 8px;font-size:14px}
+.input-box input:focus{outline:none}
+.input-box input::placeholder{color:var(--text-muted)}
+.send-btn{width:44px;height:44px;background:transparent;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;border-radius:6px}
+.send-btn:hover{color:var(--text-head)}
+
+/* Friends panel */
+.fri-panel{flex:1;display:none;flex-direction:column;overflow:hidden}
+.fri-panel.show{display:flex}
+.fri-body{flex:1;overflow-y:auto;padding:16px}
+.fri-body::-webkit-scrollbar{width:4px}
+.fri-body::-webkit-scrollbar-thumb{background:var(--border)}
+
+.add-box{background:var(--bg-dark);border-radius:8px;padding:16px;margin-bottom:16px}
+.add-box h3{color:var(--text-head);font-size:14px;margin-bottom:4px}
+.add-box p{color:var(--text-muted);font-size:12px;margin-bottom:12px}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;height:40px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:0 12px;font-size:14px;font-family:monospace}
+.add-row input:focus{outline:none;border-color:var(--accent)}
+.status-msg{font-size:12px;margin-top:6px;min-height:16px}
+
+.section-title{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin:12px 0 6px}
+.friend-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;margin-bottom:2px}
+.friend-row:hover{background:var(--hover)}
+.fav{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.finfo{flex:1}
+.finfo .fname{font-size:13px;font-weight:700;color:var(--text-head)}
+.finfo .fstatus{font-size:11px;color:var(--text-muted)}
+.f-btns{display:flex;gap:4px}
+.f-btn{width:32px;height:30px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:14px}
+.f-btn:hover{background:var(--border);color:var(--text-head)}
+.f-btn.accept{color:var(--green)}
+.f-btn.decline{color:var(--red)}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg-dark);border-radius:8px;width:380px;max-width:95vw;overflow:hidden}
+.modal-banner{height:70px}
+.modal-body{padding:0 20px 20px}
+.modal-av{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:28px;margin-top:-36px;border:4px solid var(--bg-dark)}
+.modal-nick{font-size:20px;font-weight:700;color:var(--text-head);margin-top:8px}
+.modal-code-box{background:var(--bg-input);border-radius:8px;padding:10px 14px;margin:12px 0}
+.modal-code-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px}
+.modal-code{font-size:16px;font-weight:700;color:var(--yellow);font-family:monospace}
+.modal-btns{display:flex;gap:8px;margin-top:12px}
+.modal-btn{flex:1;height:38px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700}
+.modal-btn.primary{background:var(--accent);color:white}
+.modal-btn.primary:hover{background:var(--accent-h)}
+.modal-btn.secondary{background:var(--bg-input);color:var(--text)}
+.modal-btn.secondary:hover{background:var(--border)}
+
+/* Participants modal */
+.part-list{max-height:400px;overflow-y:auto;padding:8px 0}
+
+/* Divider */
+.divider{height:1px;background:var(--border);margin:8px 0}
+
+/* Online dot */
+.dot-green{color:var(--green)}
+.dot-grey{color:var(--text-muted)}
+
+@media(max-width:600px){
+  .ch{width:200px}
+  .sv{width:54px}
+  .sv-btn{width:40px;height:40px}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="auth-card">
+    <div style="text-align:center;font-size:44px;margin-bottom:8px">👾</div>
+    <h1>Reciver</h1>
+    <p class="sub" id="auth-sub">Войди в аккаунт</p>
+    <div id="auth-form">
+      <div id="nick-field" style="display:none">
+        <label>Никнейм</label>
+        <input type="text" id="inp-nick" placeholder="Твой никнейм">
+      </div>
+      <label>Email</label>
+      <input type="email" id="inp-email" placeholder="email@example.com">
+      <label>Пароль</label>
+      <input type="password" id="inp-pass" placeholder="••••••••">
+      <p class="err" id="auth-err"></p>
+      <button class="btn" id="auth-btn" onclick="doAuth()">Войти</button>
+      <div class="toggle">
+        <span id="toggle-text">Нет аккаунта?</span>
+        <a onclick="toggleMode()"> <span id="toggle-link">Зарегистрироваться</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Server strip -->
+  <div class="sv">
+    <div style="font-size:26px;margin-bottom:4px">💬</div>
+    <div style="height:2px;background:var(--border);width:36px;margin:4px 0"></div>
+    <button class="sv-btn" id="sv-fri" onclick="toggleFriends()" title="Друзья">👥</button>
+    <button class="sv-btn" onclick="logout()" title="Выйти" style="margin-top:auto">🚪</button>
+  </div>
+
+  <!-- Channel list -->
+  <div class="ch">
+    <div class="ch-header">Reciver ✦</div>
+    <div class="ch-body" id="ch-body">
+      <button class="ch-btn" onclick="toggleFriends()">👥 Друзья</button>
+      <div class="ch-section">Каналы</div>
+      <button class="ch-btn active" id="btn-global" onclick="openGlobal()">  # общий-чат</button>
+      <div class="ch-section">Личные сообщения</div>
+      <div id="dm-list"></div>
+    </div>
+    <div class="profile-bar">
+      <div id="pav-bar" class="pav-placeholder" style="cursor:pointer" onclick="showMyProfile()"></div>
+      <div class="pinfo">
+        <div class="nick" id="pnick-bar">—</div>
+        <div class="code" id="pcode-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div class="right">
+    <!-- Chat panel -->
+    <div id="chat-panel" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="chat-hdr">
+        <span class="icon" id="hdr-icon">#</span>
+        <span class="title" id="hdr-title">общий-чат</span>
+        <button class="hdr-btn" id="hdr-btn" onclick="hdrClick()">👥</button>
+      </div>
+      <div class="msgs" id="msgs"></div>
+      <div class="input-area">
+        <div class="input-box">
+          <input type="text" id="msg-input" placeholder="Написать в #общий-чат" onkeydown="if(event.key==='Enter')sendMsg()">
+          <button class="send-btn" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Friends panel -->
+    <div class="fri-panel" id="fri-panel">
+      <div class="chat-hdr">
+        <span class="title">👥 Друзья</span>
+      </div>
+      <div class="fri-body">
+        <div class="add-box">
+          <h3>Добавить друга</h3>
+          <p>Введи код дружбы (например: ABC-1234)</p>
+          <div class="add-row">
+            <input type="text" id="inp-code" placeholder="ABC-1234" style="text-transform:uppercase">
+            <button class="btn btn-sm" onclick="addFriend()">Добавить</button>
+          </div>
+          <div class="status-msg" id="add-status"></div>
+        </div>
+        <div class="section-title">Входящие заявки</div>
+        <div id="req-list"></div>
+        <div class="section-title">Друзья</div>
+        <div id="fri-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Profile modal -->
+<div class="modal-bg" id="profile-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-banner" id="pm-banner"></div>
+    <div class="modal-body">
+      <div class="modal-av" id="pm-av"></div>
+      <div class="modal-nick" id="pm-nick"></div>
+      <div style="margin-top:4px" id="pm-status"></div>
+      <div class="modal-code-box">
+        <div class="modal-code-label">Код дружбы</div>
+        <div class="modal-code" id="pm-code"></div>
+      </div>
+      <div class="modal-btns" id="pm-btns"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Participants modal -->
+<div class="modal-bg" id="parts-modal" onclick="if(event.target===this)closePartsModal()">
+  <div class="modal">
+    <div class="modal-body" style="padding-top:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--text-head);margin-bottom:12px">👥 Участники</div>
+      <div class="part-list" id="part-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ["#5865F2","#ED4245","#EB459E","#57F287","#FEE75C","#E67E22","#9B59B6","#1ABC9C","#3498DB","#E74C3C"];
+function nickColor(n){return COLORS[Array.from(n||"?").reduce((a,c)=>a+c.charCodeAt(0),0)%COLORS.length]}
+function avatar(nick,size=38){const c=nickColor(nick);const l=(nick||"?")[0].toUpperCase();return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.floor(size/2.5)}px;color:white;flex-shrink:0">${l}</div>`}
+
+let authMode = "login";
+let myUid = null, myData = null;
+let curChat = null, curChatUid = null;
+let pollTimer = null;
+let lastMsgKey = {};
+let dmFriends = {};
+let viewUid = null;
+
+function toggleMode(){
+  authMode = authMode==="login"?"register":"login";
+  document.getElementById("auth-sub").textContent = authMode==="login"?"Войди в аккаунт":"Создай аккаунт!";
+  document.getElementById("auth-btn").textContent = authMode==="login"?"Войти":"Создать аккаунт";
+  document.getElementById("toggle-text").textContent = authMode==="login"?"Нет аккаунта?":"Уже есть аккаунт?";
+  document.getElementById("toggle-link").textContent = authMode==="login"?"Зарегистрироваться":"Войти";
+  document.getElementById("nick-field").style.display = authMode==="register"?"block":"none";
+  document.getElementById("auth-err").textContent = "";
+}
+
+async function doAuth(){
+  const email = document.getElementById("inp-email").value.trim();
+  const pass = document.getElementById("inp-pass").value.trim();
+  const nick = document.getElementById("inp-nick").value.trim();
+  if(!email||!pass){document.getElementById("auth-err").textContent="Заполни все поля";return}
+  document.getElementById("auth-btn").disabled = true;
+  document.getElementById("auth-btn").textContent = "Загрузка...";
+  const body = authMode==="login"?{email,password:pass}:{email,password:pass,nickname:nick||email.split("@")[0]};
+  const r = await fetch(`/api/${authMode==="login"?"login":"register"}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
+  document.getElementById("auth-btn").disabled = false;
+  document.getElementById("auth-btn").textContent = authMode==="login"?"Войти":"Создать аккаунт";
+  if(r.ok){startApp()}
+  else{document.getElementById("auth-err").textContent=r.error||"Ошибка"}
+}
+document.getElementById("inp-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doAuth()});
+
+async function startApp(){
+  const r = await fetch("/api/me").then(r=>r.json());
+  if(!r.ok){document.getElementById("auth-err").textContent="Сессия истекла";return}
+  myUid = r.uid; myData = r.data;
+  document.getElementById("auth").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  updateProfileBar();
+  loadDmSidebar();
+  openGlobal();
+  startPolling();
+}
+
+function updateProfileBar(){
+  const nick = myData?.nickname||"?";
+  const bar = document.getElementById("pav-bar");
+  bar.style.background = nickColor(nick);
+  bar.style.color = "white";
+  bar.textContent = (nick[0]||"?").toUpperCase();
+  document.getElementById("pnick-bar").textContent = nick;
+  document.getElementById("pcode-bar").textContent = myData?.friend_code||"";
+}
+
+async function loadDmSidebar(){
+  const r = await fetch("/api/friends").then(r=>r.json());
+  if(!r.ok) return;
+  dmFriends = r.friends||{};
+  const el = document.getElementById("dm-list");
+  el.innerHTML = "";
+  for(const [fuid,info] of Object.entries(dmFriends)){
+    const nick = info.nickname||fuid;
+    const online = info.online;
+    const btn = document.createElement("button");
+    btn.className = "ch-btn";
+    btn.id = `dm-btn-${fuid}`;
+    btn.innerHTML = `${online?"🟢":"⚫"} ${nick}`;
+    btn.onclick = () => openDm(fuid, nick);
+    el.appendChild(btn);
+  }
+}
+
+function resetBtns(){
+  document.getElementById("btn-global").classList.remove("active");
+  for(const fuid of Object.keys(dmFriends)){
+    const b = document.getElementById(`dm-btn-${fuid}`);
+    if(b) b.classList.remove("active");
+  }
+}
+
+function openGlobal(){
+  showChat();
+  resetBtns();
+  document.getElementById("btn-global").classList.add("active");
+  curChat = "global"; curChatUid = null;
+  document.getElementById("hdr-icon").textContent = "#";
+  document.getElementById("hdr-title").textContent = "общий-чат";
+  document.getElementById("hdr-btn").textContent = "👥";
+  document.getElementById("msg-input").placeholder = "Написать в #общий-чат";
+  loadMsgs("global");
+}
+
+async function openDm(fuid, nick){
+  showChat();
+  resetBtns();
+  const b = document.getElementById(`dm-btn-${fuid}`);
+  if(b) b.classList.add("active");
+  const r = await fetch(`/api/dm_id?other=${fuid}`).then(r=>r.json());
+  curChat = r.dm_id; curChatUid = fuid;
+  document.getElementById("hdr-icon").textContent = "@";
+  document.getElementById("hdr-title").textContent = nick;
+  document.getElementById("hdr-btn").textContent = "👤";
+  document.getElementById("msg-input").placeholder = `Написать ${nick}`;
+  loadMsgs(curChat);
+  document.getElementById("msg-input").focus();
+}
+
+function showChat(){
+  document.getElementById("chat-panel").style.display = "flex";
+  document.getElementById("fri-panel").classList.remove("show");
+  document.getElementById("sv-fri").classList.remove("active");
+}
+
+function showFriends(){
+  document.getElementById("chat-panel").style.display = "none";
+  document.getElementById("fri-panel").classList.add("show");
+  document.getElementById("sv-fri").classList.add("active");
+  loadFriendsPanel();
+}
+
+function toggleFriends(){
+  if(document.getElementById("fri-panel").classList.contains("show")) showChat();
+  else showFriends();
+}
+
+async function loadFriendsPanel(){
+  const [fr, rr] = await Promise.all([
+    fetch("/api/friends").then(r=>r.json()),
+    fetch("/api/requests").then(r=>r.json())
+  ]);
+  // Requests
+  const rl = document.getElementById("req-list");
+  rl.innerHTML = "";
+  const reqs = rr.requests||{};
+  if(!Object.keys(reqs).length){rl.innerHTML='<div style="color:var(--text-muted);font-size:12px">Нет заявок</div>'}
+  for(const [ruid,info] of Object.entries(reqs)){
+    const nick = info.nickname||ruid;
+    const d = document.createElement("div");
+    d.className = "friend-row";
+    d.innerHTML = `${avatar(nick,36)}<div class="finfo"><div class="fname">${nick}</div></div>
+      <div class="f-btns">
+        <button class="f-btn accept" onclick="acceptReq('${ruid}',this.closest('.friend-row'))">✓</button>
+        <button class="f-btn decline" onclick="declineReq('${ruid}',this.closest('.friend-row'))">✕</button>
+      </div>`;
+    rl.appendChild(d);
+  }
+  // Friends
+  const fl = document.getElementById("fri-list");
+  fl.innerHTML = "";
+  const fris = fr.friends||{};
+  if(!Object.keys(fris).length){fl.innerHTML='<div style="color:var(--text-muted);font-size:12px">Пока нет друзей 😔</div>'}
+  for(const [fuid,info] of Object.entries(fris)){
+    const nick = info.nickname||fuid;
+    const online = info.online;
+    const d = document.createElement("div");
+    d.className = "friend-row";
+    d.innerHTML = `${avatar(nick,36)}<div class="finfo"><div class="fname">${nick}</div><div class="fstatus">${online?"🟢 онлайн":"⚫ не в сети"}</div></div>
+      <div class="f-btns">
+        <button class="f-btn" onclick="openDmShow('${fuid}','${nick}')" title="Написать">💬</button>
+        <button class="f-btn" onclick="showProfile('${fuid}')" title="Профиль">👤</button>
+      </div>`;
+    fl.appendChild(d);
+  }
+}
+
+function openDmShow(fuid, nick){showChat(); openDm(fuid, nick)}
+
+async function addFriend(){
+  const code = document.getElementById("inp-code").value.trim().toUpperCase();
+  if(!code) return;
+  const st = document.getElementById("add-status");
+  st.style.color = "var(--text-muted)"; st.textContent = "Поиск...";
+  const r = await fetch("/api/add_friend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})}).then(r=>r.json());
+  if(r.ok){st.style.color="var(--green)";st.textContent="Заявка отправлена! ✓";document.getElementById("inp-code").value=""}
+  else{st.style.color="var(--red)";st.textContent=r.error||"Ошибка"}
+}
+
+async function acceptReq(ruid, row){
+  await fetch("/api/accept_friend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:ruid})});
+  row.remove(); loadDmSidebar(); loadFriendsPanel();
+}
+
+async function declineReq(ruid, row){
+  await fetch("/api/decline_friend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:ruid})});
+  row.remove();
+}
+
+async function loadMsgs(cid){
+  const r = await fetch(`/api/messages/${cid}`).then(r=>r.json());
+  if(!r.ok || curChat !== cid) return;
+  const el = document.getElementById("msgs");
+  el.innerHTML = "";
+  let prevUid = null;
+  for(const msg of r.messages){
+    renderBubble(msg, prevUid===msg.uid);
+    prevUid = msg.uid;
+    if(msg.key) lastMsgKey[cid] = msg.key;
+  }
+  scrollBottom();
+}
+
+function renderBubble(msg, grouped){
+  if(!msg||!msg.type) return;
+  const el = document.getElementById("msgs");
+  const isMe = msg.uid === myUid;
+  const nick = msg.nickname||"?";
+  const ts = msg.ts ? new Date(msg.ts*1000).toLocaleTimeString("ru",{hour:"2-digit",minute:"2-digit"}) : "";
+  const row = document.createElement("div");
+  row.className = "msg-row" + (grouped?" grouped":"");
+
+  if(!grouped){
+    row.innerHTML = `
+      ${avatar(nick,40)}
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="msg-nick" style="color:${isMe?"var(--accent)":""}" onclick="showProfile('${msg.uid}')">${nick}</span>
+          <span class="msg-time">${ts}</span>
+        </div>
+        ${msg.deleted?'<div class="msg-deleted">🗑 Удалено</div>':`<div class="msg-text">${escHtml(msg.text||"")}</div>`}
+      </div>`;
+  } else {
+    row.innerHTML = msg.deleted?'<div class="msg-deleted">🗑 Удалено</div>':`<div class="msg-text">${escHtml(msg.text||"")}</div>`;
+  }
+  el.appendChild(row);
+}
+
+function escHtml(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+
+function scrollBottom(){
+  const el = document.getElementById("msgs");
+  setTimeout(()=>{el.scrollTop=el.scrollHeight},50);
+}
+
+async function sendMsg(){
+  const input = document.getElementById("msg-input");
+  const text = input.value.trim();
+  if(!text||!curChat) return;
+  input.value = "";
+  await fetch("/api/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:curChat,text})});
+  loadMsgs(curChat);
+}
+
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async()=>{
+    if(!curChat) return;
+    const r = await fetch(`/api/messages/${curChat}`).then(r=>r.json());
+    if(!r.ok) return;
+    const msgs = r.messages;
+    if(!msgs.length) return;
+    const last = lastMsgKey[curChat];
+    if(!last){lastMsgKey[curChat]=msgs[msgs.length-1].key;return}
+    let found=false; let prevUid=null;
+    for(const msg of msgs){
+      if(msg.key===last){found=true;prevUid=msg.uid;continue}
+      if(found && msg.uid!==myUid){
+        lastMsgKey[curChat]=msg.key;
+        renderBubble(msg, prevUid===msg.uid);
+        scrollBottom();
+      }
+      prevUid=msg.uid;
+    }
+  }, 2500);
+}
+
+function hdrClick(){
+  if(curChat==="global") showParticipants();
+  else if(curChatUid) showProfile(curChatUid);
+}
+
+async function showParticipants(){
+  const r = await fetch("/api/users").then(r=>r.json());
+  const list = document.getElementById("part-list");
+  list.innerHTML = "";
+  for(const [uid,info] of Object.entries(r.users||{})){
+    const nick = info.nickname||"?";
+    const online = info.online;
+    const d = document.createElement("div");
+    d.className = "friend-row";
+    d.innerHTML = `${avatar(nick,36)}<div class="finfo"><div class="fname">${nick}</div><div class="fstatus">${online?"🟢":"⚫"}</div></div>
+      <button class="f-btn" onclick="closePartsModal();showProfile('${uid}')" title="Профиль">👤</button>`;
+    list.appendChild(d);
+  }
+  document.getElementById("parts-modal").classList.add("show");
+}
+
+function closePartsModal(){document.getElementById("parts-modal").classList.remove("show")}
+
+async function showProfile(uid){
+  viewUid = uid;
+  const r = await fetch("/api/users").then(r=>r.json());
+  const data = r.users?.[uid]||{};
+  const nick = data.nickname||"?";
+  const online = data.online;
+  const code = data.friend_code||"—";
+  document.getElementById("pm-banner").style.background = nickColor(nick);
+  const av = document.getElementById("pm-av");
+  av.style.background = nickColor(nick);
+  av.style.color = "white";
+  av.textContent = (nick[0]||"?").toUpperCase();
+  document.getElementById("pm-nick").textContent = nick;
+  document.getElementById("pm-status").innerHTML = online?'<span class="dot-green">🟢 онлайн</span>':'<span class="dot-grey">⚫ не в сети</span>';
+  document.getElementById("pm-code").textContent = code;
+  const btns = document.getElementById("pm-btns");
+  btns.innerHTML = "";
+  if(uid !== myUid){
+    btns.innerHTML = `
+      <button class="modal-btn primary" onclick="closeModal();openDmShow('${uid}','${nick}')">💬 Написать</button>
+      <button class="modal-btn secondary" onclick="addFriendByCode('${code}')">➕ В друзья</button>`;
+  }
+  document.getElementById("profile-modal").classList.add("show");
+}
+
+async function addFriendByCode(code){
+  if(!code||code==="—") return;
+  await fetch("/api/add_friend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});
+  closeModal();
+}
+
+function showMyProfile(){showProfile(myUid)}
+function closeModal(){document.getElementById("profile-modal").classList.remove("show")}
+
+async function logout(){
+  clearInterval(pollTimer);
+  await fetch("/api/logout",{method:"POST"});
+  location.reload();
+}
+
+// Auto-login
+window.onload = async()=>{
+  const r = await fetch("/api/me").then(r=>r.json());
+  if(r.ok){myUid=r.uid;myData=r.data;startApp()}
+}
+</script>
+</body>
+</html>
