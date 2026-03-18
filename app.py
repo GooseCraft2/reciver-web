@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session
 import requests, json, time, os
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get("SECRET_KEY", "reciver-secret-key-2024-fixed")
 
 DB_URL  = "https://messendjer-e4d10-default-rtdb.europe-west1.firebasedatabase.app"
 API_KEY = "AIzaSyADx4iNnP6IvttRE1ud_jv9bC217M0PEDg"
