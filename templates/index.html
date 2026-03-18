@@ -486,6 +486,8 @@ async function loadMsgs(cid){
     prevUid = msg.uid;
     if(msg.key) lastMsgKey[cid] = msg.key;
   }
+  // Always set lastKey to most recent
+  if(r.messages.length) lastMsgKey[cid] = r.messages[r.messages.length-1].key;
   scrollBottom();
 }
 
@@ -526,31 +528,40 @@ async function sendMsg(){
   const text = input.value.trim();
   if(!text||!curChat) return;
   input.value = "";
+  // Optimistic render
+  const tmpMsg = {uid:myUid, nickname:myData?.nickname||"?", text, ts:Math.floor(Date.now()/1000), type:"text"};
+  const prevUid = document.getElementById("msgs").lastElementChild?.dataset?.uid;
+  renderBubble(tmpMsg, prevUid===myUid);
+  scrollBottom();
   await fetch("/api/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:curChat,text})});
-  loadMsgs(curChat);
+  // Reload to get real key
+  pollOnce();
+}
+
+async function pollOnce(){
+  if(!curChat) return;
+  const r = await fetch(`/api/messages/${curChat}`).then(r=>r.json());
+  if(!r.ok || !r.messages.length) return;
+  const msgs = r.messages;
+  const last = lastMsgKey[curChat];
+  // Update lastKey
+  lastMsgKey[curChat] = msgs[msgs.length-1].key;
+  if(!last) return;
+  // Find new messages after last known key
+  let found = false; let prevUid = null;
+  for(const msg of msgs){
+    if(msg.key === last){found=true; prevUid=msg.uid; continue}
+    if(found){
+      renderBubble(msg, prevUid===msg.uid);
+      scrollBottom();
+    }
+    prevUid = msg.uid;
+  }
 }
 
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(async()=>{
-    if(!curChat) return;
-    const r = await fetch(`/api/messages/${curChat}`).then(r=>r.json());
-    if(!r.ok) return;
-    const msgs = r.messages;
-    if(!msgs.length) return;
-    const last = lastMsgKey[curChat];
-    if(!last){lastMsgKey[curChat]=msgs[msgs.length-1].key;return}
-    let found=false; let prevUid=null;
-    for(const msg of msgs){
-      if(msg.key===last){found=true;prevUid=msg.uid;continue}
-      if(found && msg.uid!==myUid){
-        lastMsgKey[curChat]=msg.key;
-        renderBubble(msg, prevUid===msg.uid);
-        scrollBottom();
-      }
-      prevUid=msg.uid;
-    }
-  }, 2500);
+  pollTimer = setInterval(pollOnce, 2000);
 }
 
 function hdrClick(){
